@@ -1,5 +1,5 @@
 import os
-import time
+from PIL import Image
 
 import pygame
 import tkinter
@@ -13,6 +13,45 @@ mouse.set_colorkey((255, 255, 255))
 pygame.display.set_caption("sys")
 
 
+def is_in_rect(pos, rect):
+    x, y = pos
+    rx, ry, rw, rh = rect
+    if (rx <= x <= rx + rw) and (ry <= y <= ry + rh):
+        return True
+    return False
+
+
+class MovableObj(object):
+    def __init__(self, x, y, w, h, img, visible: bool):
+        self.x=x
+        self.y=y
+        self.w=w
+        self.h=h
+        self.img=img
+        self.visible=visible
+        self.is_move=None
+        self.img.set_colorkey((255, 255, 255))
+
+    def drag(self):
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                w, h = self.img.get_size()
+                if is_in_rect(event.pos, (self.x, self.y, w, h)):
+                    self.is_move = True
+            if event.type == pygame.MOUSEBUTTONUP:
+                self.is_move = False
+            if event.type == pygame.MOUSEMOTION:
+                if self.is_move:
+                    x, y = event.pos
+                    image_w, image_h = self.img.get_size()
+                    # 保证鼠标在图片的中心
+                    self.x=x-image_w/2
+                    self.y=y-image_h/2
+                    display.blit(self.img, (self.x, self.y))
+        pygame.display.update()
+        display.blit(self.img, (self.x, self.y))
+
+
 def take_font(size):
     font=pygame.font.Font(os.path.join("disk/sys/fonts/arialbd.ttf"), size)
     return font
@@ -21,57 +60,40 @@ def take_font(size):
 display=pygame.display.set_mode((width, height))
 
 
-class Window(object):
-    def __init__(self, x, y, w, h, visible=True):
-        self.x=x
-        self.y=y
-        self.w=w
-        self.h=h
-        self.visible=visible
-        self.img=pygame.image.load("disk/sys/images/window.jpg").convert()
-        display.fill((255, 255, 255))
-        display.blit(self.img, (self.x, self.y))
-        pygame.display.flip()
-        self.is_move = False
-        self.img.set_colorkey((255, 255, 255))
-        pygame.transform.scale(display, (w, h))
+class Window(MovableObj):
+    def __init__(self):
+        super().__init__(width / 2, height / 2, 100, 100, img=pygame.image.load("disk/sys/images/window.jpg"),
+                         visible=True)
 
-    def is_in_rect(self, pos, rect):
-        x, y = pos
-        rx, ry, rw, rh = rect
-        if (rx <= x <= rx + rw) and (ry <= y <= ry + rh):
-            return True
-        return False
-
-    def drag(self):
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                w, h = self.img.get_size()
-                if self.is_in_rect(event.pos, (self.x, self.y, w, h)):
-                    self.is_move = True
-            if event.type == pygame.MOUSEBUTTONUP:
-                self.is_move = False
-            if event.type == pygame.MOUSEMOTION:
-                if self.is_move:
-                    display.fill((255, 255, 255))
-                    x, y = event.pos
-                    image_w, image_h = self.img.get_size()
-                    # 保证鼠标在图片的中心
-                    self.x=x-image_w/2
-                    self.y=y-image_h/2
-                    display.blit(self.img, (self.x, self.y))
-        pygame.display.update()
+    def update(self):
+        super().drag()
 
 
 class Table(object):
     def __init__(self):
         self.img=pygame.image.load("disk/sys/images/R-C (1).jpg")
+
+    def update(self):
         display.blit(self.img, (0, 0))
-        pygame.display.flip()
 
 
-win=Window(width/2, height/2, 200, 200)
-while True:
-    win.drag()
-    Table()
+class BottomContainer(object):
+    def __init__(self):
+        self.img=pygame.image.load("disk/sys/images/bottom.png")
+        self.img.set_colorkey((255, 255, 255))
 
+    def update(self):
+        display.blit(self.img, (0, height-self.img.get_height()))
+
+
+def update_system():
+    Table().update()
+    BottomContainer().update()
+
+
+win=Window()
+if __name__ == '__main__':
+    while True:
+        update_system()
+        win.update()
+        pygame.display.update()
